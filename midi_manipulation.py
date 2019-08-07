@@ -6,7 +6,7 @@ from tqdm import tqdm
 lowerBound = 24 #The lowest note
 upperBound = 102 #The highest note
 span = upperBound-lowerBound #The note range
-rbm_timesteps      = 5 #The number of note timesteps that we produce with each RBM
+rbm_timesteps      = 1 #The number of note timesteps that we produce with each RBM
 
 
 def write_song(path, song):

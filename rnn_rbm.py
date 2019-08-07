@@ -10,9 +10,9 @@ import midi_manipulation
 """
 
 note_range         = midi_manipulation.span #The range of notes that we can produce
-rbm_timesteps	   = midi_manipulation.rbm_timesteps #The number of note timesteps that we produce with each RBM
+rbm_timesteps      = midi_manipulation.rbm_timesteps #The number of note timesteps that we produce with each RBM
 n_visible          = 2*note_range*rbm_timesteps #The size of each data vector and the size of the RBM visible layer , n_visible=780 in our case
-n_hidden           = 50 #The size of the RBM hidden layer
+n_hidden           = 200 #The size of the RBM hidden layer
 n_hidden_recurrent = 100 #The size of each RNN hidden layer
 
 def rnnrbm():
@@ -40,7 +40,7 @@ def rnnrbm():
     def rnn_recurrence(u_tm1, v_t):
         #Iterate through the data in the batch and generate the values of the RNN hidden nodes
         v_t  =  tf.reshape(v_t, [1, n_visible])
-        u_t = (tf.tanh(bu + tf.matmul(v_t, Wvu) + tf.matmul(u_tm1, Wuu)))
+        u_t = (tf.sigmoid(bu + tf.matmul(v_t, Wvu) + tf.matmul(u_tm1, Wuu)))
         return u_t
 
     def visible_bias_recurrence(bv_t, u_tm1):
@@ -53,7 +53,9 @@ def rnnrbm():
         bh_t = tf.add(bh, tf.matmul(u_tm1, Wuh))
         return bh_t       
 
-
+####################
+#Below is two functions for generation and construction, but not used in training
+####################
 
     def generate(timesteps, primer=x):
         """
@@ -74,7 +76,7 @@ def rnnrbm():
             x_out = RBM.gibbs_sample(tf.reshape(music[-1,:], [1,n_visible]), W, bv_t, bh_t, k=25)
             
             #Update the RNN hidden state based on the musical output and current hidden state.
-            u_t  = (tf.tanh(bu + tf.matmul(x_out, Wvu) + tf.matmul(u_tm1, Wuu)))
+            u_t  = (tf.sigmoid(bu + tf.matmul(x_out, Wvu) + tf.matmul(u_tm1, Wuu)))
 
             #Add the new output to the musical piece
             music = tf.concat([music, x_out], axis=0)
@@ -129,8 +131,9 @@ def rnnrbm():
                                        shape_invariants=[count.get_shape(), tf.TensorShape([None, None])])
         return music
     
-        
-    
+##########################
+# Below is for training
+##########################   
     #Reshape our bias matrices to be the same size as the batch.
     tf.assign(BH_t, tf.tile(BH_t, [size_bt, 1]))
     tf.assign(BV_t, tf.tile(BV_t, [size_bt, 1]))

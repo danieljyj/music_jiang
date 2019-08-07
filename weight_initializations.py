@@ -10,7 +10,7 @@ import midi_manipulation
     training them directly on the data with CD-k. We initialize the parameters of the RNN with small weights.
 """
 
-num_epochs = 100 #The number of epochs to train the RBM
+num_epochs = 10000 #The number of epochs to train the RBM
 lr = 0.01 #The learning rate for the RBM
 
 def main():
@@ -37,12 +37,12 @@ def main():
 
     #Note that we initialize the RNN->RBM bias vectors with the bias vectors of the trained RBM. These vectors will form the templates for the bv_t and
     #bh_t of each RBM that we create when we run the RNN-RBM
-    updt = RBM.get_cd_update(x, W, bv, bh, k=15, lr=lr)  # CD-k
+    updt = RBM.get_cd_update(x, W, bv, bh, k=25, lr=lr)  # CD-k
 
     #Run the session
     with tf.Session() as sess:
         #Initialize the variables of the model
-        init = tf.initialize_all_variables()
+        init = tf.global_variables_initializer()
         sess.run(init)
 
         #Run over each song num_epoch times
