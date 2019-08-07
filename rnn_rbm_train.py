@@ -17,7 +17,7 @@ saved_initial_weights_path = "parameter_checkpoints/initialized.ckpt" #The path 
 
 def main(num_epochs):
     #First, we build the model and get pointers to the model parameters
-    x, cost, generate, W, Wuh, Wuv, Wvu, Wuu, bh, bv, bu, lr, u0 = rnn_rbm.rnnrbm()
+    x, cost, generate, reconstruction, W, Wuh, Wuv, Wvu, Wuu, bh, bv, bu, lr, u0 = rnn_rbm.rnnrbm()
 
     #The trainable parameters, as well as the initial state of the RNN
     params = [W, Wuh, Wuv, Wvu, Wuu, bh, bv, bu, u0]
@@ -31,11 +31,11 @@ def main(num_epochs):
     grad_and_params = [(tf.clip_by_value(grad, -10., 10.), var) for grad, var in grad_and_params] #We use gradient clipping to prevent gradients from blowing up during training
     updt = opt_func.apply_gradients(grad_and_params)#
 
-    songs = midi_manipulation.get_songs('Pop_Music_Midi') #Load the songs 
-
-    saver = tf.train.Saver(params) #We use this saver object to restore the weights of the model and save the weights every few epochs
+    #songs = midi_manipulation.get_songs('Pop_Music_Midi') #Load the songs 
+    songs = midi_manipulation.get_songs('single_music') #Load the songs 
+    saver = tf.train.Saver(params, max_to_keep=1) #We use this saver object to restore the weights of the model and save the weights every few epochs
     with tf.Session() as sess:
-        init = tf.initialize_all_variables()
+        init = tf.global_variables_initializer()
         sess.run(init) 
         saver.restore(sess, saved_initial_weights_path) #Here we load the initial weights of the model that we created with weight_initializations.py
 
@@ -45,7 +45,7 @@ def main(num_epochs):
             costs = []
             start = time.time()
             for idx, song in enumerate(songs):
-                for i in range(1, len(song), batch_size):  #song is a matrix, len(song) is the length of time series, len(song[])is the length of visible vector of RBM
+                for i in range(1, len(song), batch_size):  #song is a matrix, len(song) is the length of time series
                     tr_x = song[i:i + batch_size] 
                     alpha = min(0.01, 0.1/float(i)) # We decrease the learning rate according to a schedule.
                     _, C = sess.run([updt, cost], feed_dict={x: tr_x, lr: alpha}) 

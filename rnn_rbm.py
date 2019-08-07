@@ -23,7 +23,7 @@ def rnnrbm():
     lr  = tf.placeholder(tf.float32) #The learning rate. We set and change this value during training.
     
     size_bt = tf.shape(x)[0] #the batch size
-	# parameters
+    # parameters
     W   = tf.Variable(tf.zeros([n_visible, n_hidden]), name="W")
     Wuh = tf.Variable(tf.zeros([n_hidden_recurrent, n_hidden]), name="Wuh")
     Wuv = tf.Variable(tf.zeros([n_hidden_recurrent, n_visible]), name="Wuv")
@@ -53,44 +53,84 @@ def rnnrbm():
         bh_t = tf.add(bh, tf.matmul(u_tm1, Wuh))
         return bh_t       
 
-    def generate_recurrence(count, k, u_tm1, primer, x, music):
-        #To generate music: This function builds and runs the gibbs steps for each RBM in the chain
-        bv_t = tf.add(bv, tf.matmul(u_tm1, Wuv))
-        bh_t = tf.add(bh, tf.matmul(u_tm1, Wuh))
 
-        #Run the Gibbs step to get the music output. Prime the RBM with the previous musical output.
-        x_out = RBM.gibbs_sample(primer, W, bv_t, bh_t, k=25)
-        
-        #Update the RNN hidden state based on the musical output and current hidden state.
-        u_t  = (tf.tanh(bu + tf.matmul(x_out, Wvu) + tf.matmul(u_tm1, Wuu)))
 
-        #Add the new output to the musical piece
-        music = tf.concat([music, x_out], axis=0)
-        return count+1, k, u_t, x_out, x, music
-
-    def generate(timesteps, x=x, size_bt=size_bt, u0=u0, n_visible=n_visible, prime_length=100):
+    def generate(timesteps, primer=x):
         """
             This function handles generating music. This function is one of the outputs of the build_rnnrbm function
             Args:
                 timesteps (int): The number of timesteps to generate
-                x (tf.placeholder): The data vector. We can use feed_dict to set this as the music primer. 
-                size_bt (tf.float32): The batch size
-                u0 (tf.Variable): The initial state of the RNN
-                n_visible (int): The size of the data vectors
-                prime_length (int): we use only the first prime_length timesteps in the primer song before beginning to generate music
+                primer (tf.placeholder): The primer song
             Returns:
                 The generated music, as a tf.Tensor
-
         """
-        Uarr = tf.scan(rnn_recurrence, x, initializer=u0)# x is of dimension 2, Uarr is of dimension 3
-        U = Uarr[-1, :, :] # the beginning hidden recurrent unit of our generation
-        [_, _, _, _, _, music] = tf.while_loop(lambda count, num_iter, *args: count < num_iter,
-                                                         generate_recurrence, loop_vars=[tf.constant(0, tf.int32), tf.constant(timesteps), U,
-                                                         tf.zeros([1, n_visible], tf.float32), x, 
-                                                         tf.zeros([1, n_visible],  tf.float32)],shape_invariants=[tf.constant(0, tf.int32).get_shape(),  tf.constant(timesteps).get_shape(),
-                                                            U.get_shape(), tf.zeros([1, n_visible], tf.float32).get_shape(), x.get_shape(), tf.TensorShape([None, None])])
+        
+        def generate_recurrence(step, u_tm1, music):
+            #To generate music: This function builds and runs the gibbs steps for each RBM in the chain
+            bv_t = tf.add(bv, tf.matmul(u_tm1, Wuv))
+            bh_t = tf.add(bh, tf.matmul(u_tm1, Wuh))
+
+            #Run the Gibbs step to get the music output. Prime the RBM with the previous musical output.
+            x_out = RBM.gibbs_sample(tf.reshape(music[-1,:], [1,n_visible]), W, bv_t, bh_t, k=25)
+            
+            #Update the RNN hidden state based on the musical output and current hidden state.
+            u_t  = (tf.tanh(bu + tf.matmul(x_out, Wvu) + tf.matmul(u_tm1, Wuu)))
+
+            #Add the new output to the musical piece
+            music = tf.concat([music, x_out], axis=0)
+            return step+1, u_t, music
+            
+        Uarr = tf.scan(rnn_recurrence, primer, initializer=u0)# x is of dimension 2, Uarr is of dimension 3
+        u_tm1 = Uarr[-1, :, :] # the beginning hidden recurrent unit of our generation
+        music = tf.zeros([1, n_visible])
+        
+        loop_vars=[tf.constant(0), u_tm1, music]
+        cond = lambda count, *args : count < timesteps
+        
+        [_, _, music] = tf.while_loop(cond, generate_recurrence, loop_vars, 
+                                    shape_invariants=[tf.constant(0).get_shape(), u_tm1.get_shape(), tf.TensorShape([None, None])])
         return music
 
+    def reconstruction():
+        """
+            This function handles reconstructing music. This function is one of the outputs of the rnnrbm() function
+            Args:
+                primer (tf.placeholder): The primer song
+            Returns:
+                The reconstructed music, as a tf.Tensor
+        """
+        primer=x
+        Uarr = tf.scan(rnn_recurrence, primer, initializer=u0)# primer is of dimension 2, Uarr is of dimension 3
+        # one step of time, execute sampling above the current RBM
+        def reconstruction_recurrence(step, music):
+            #To generate music: This function builds and runs the gibbs steps for each RBM in the chain
+            if step==0:
+                bv_t = tf.add(bv, tf.matmul(u0, Wuv))
+                bh_t = tf.add(bh, tf.matmul(u0, Wuh))
+            else:
+                bv_t = tf.add(bv, tf.matmul(Uarr[step-1], Wuv))
+                bh_t = tf.add(bh, tf.matmul(Uarr[step-1], Wuh))
+
+            #Run the Gibbs step to get the music output. Prime the RBM with the previous musical output.
+            x_out = RBM.gibbs_sample(tf.reshape(primer[step,:], [1, n_visible]), W, bv_t, bh_t, k=1)
+            
+            #Add the new output to the musical piece
+            if step==0:
+                music = tf.assign(music, x_out)
+            else:
+                music = tf.concat([music, x_out], axis=0)
+            return step+1, music
+        
+        count = tf.constant(0)
+        music = tf.zeros([1, n_visible])
+        loop_vars = [count, music]
+        cond = lambda count, *args: count <  tf.cast(tf.shape(primer)[0], tf.int32)
+        [_, music] = tf.while_loop(cond, reconstruction_recurrence, loop_vars, 
+                                       shape_invariants=[count.get_shape(), tf.TensorShape([None, None])])
+        return music
+    
+        
+    
     #Reshape our bias matrices to be the same size as the batch.
     tf.assign(BH_t, tf.tile(BH_t, [size_bt, 1]))
     tf.assign(BV_t, tf.tile(BV_t, [size_bt, 1]))
@@ -101,5 +141,5 @@ def rnnrbm():
     BH_t = tf.reshape(tf.scan(hidden_bias_recurrence, u_t, tf.zeros([1, n_hidden], tf.float32)), [size_bt, n_hidden])
     #Get the free energy cost from each of the RBMs in the batch 
     cost = RBM.get_free_energy_cost(x, W, BV_t, BH_t, k=15)
-    return x, cost, generate, W, Wuh, Wuv, Wvu, Wuu, bh, bv, bu, lr, u0
+    return x, cost, generate, reconstruction, W, Wuh, Wuv, Wvu, Wuu, bh, bv, bu, lr, u0
 
