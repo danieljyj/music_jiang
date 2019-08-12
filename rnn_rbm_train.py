@@ -11,7 +11,7 @@ import midi_manipulation
 """
 
 
-batch_size = 100 #The number of trianing examples to feed into the rnn_rbm at a time
+batch_size = 500 #The number of trianing examples to feed into the rnn_rbm at a time
 saved_initial_weights_path = "parameter_checkpoints/initialized.ckpt" #The path to the initialized weights checkpoint file
 
 def main(num_epochs):
@@ -45,9 +45,7 @@ def main(num_epochs):
             costs = []
             start = time.time()
             for idx, song in enumerate(songs):
-                if(len(song)< batch_size):
-                    print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-                for i in range(1, len(song), batch_size):  #song is a matrix, len(song) is the length of time series. Usually, in our dataset, len(song) is musch less than 100
+                for i in range(1, len(song), batch_size):  #song is a matrix, len(song) is the length of time series.
                     tr_x = song[i:i + batch_size] 
                     alpha = min(0.01, 0.1/float(i)) # We decrease the learning rate according to a schedule.
                     _, C = sess.run([updt, cost], feed_dict={x: tr_x, lr: alpha}) 
