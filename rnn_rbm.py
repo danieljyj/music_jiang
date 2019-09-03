@@ -100,8 +100,8 @@ def rnnrbm():
         Uarr  = tf.scan(rnn_recurrence, primer, initializer=u0) # primer is of dimension 2, Uarr is of dimension 3
         Uarr = tf.concat([tf.reshape(u0,[1, 1, n_hidden_recurrent]), Uarr[:-1,:,:]], 0)
         #Scan through the rnn and generate the visible and hidden biases for each RBM in the batch
-        BV_t = tf.reshape(tf.scan(visible_bias_recurrence, Uarr, tf.zeros([1, n_visible])), [size_bt, n_visible])
-        BH_t = tf.reshape(tf.scan(hidden_bias_recurrence, Uarr, tf.zeros([1, n_hidden])), [size_bt, n_hidden])
+        BV_t = tf.reshape(tf.scan(visible_bias_recurrence, Uarr, bv), [size_bt, n_visible])
+        BH_t = tf.reshape(tf.scan(hidden_bias_recurrence, Uarr, bh), [size_bt, n_hidden])
         music = RBM.gibbs_sample(primer, W, BV_t, BH_t, k=1)
         return music
             

@@ -7,7 +7,6 @@ import numpy as np
     This file contains the TF implementation of the Restricted Boltzman Machine
 """
 
-
 #This function lets us easily sample from a vector of probabilities
 def sample(probs):
     #returns vector of 0 and 1
@@ -39,7 +38,7 @@ def get_free_energy_cost(x, W, bv, bh, k):
 
     def F(xx):
         #The function computes the free energy of a visible vector. 
-        return -tf.reduce_sum(tf.log(1 + tf.exp(tf.matmul(xx, W) + bh)), axis=1) - tf.matmul(xx, tf.transpose(bv))
+        return -tf.reduce_sum(tf.log(1 + tf.exp(tf.matmul(xx, W) + bh)), axis=1) - tf.reduce_sum(tf.multiply(xx, bv), axis=1)
 
     #The cost is based on the difference in free energy between x and xsample
     cost = tf.reduce_mean(tf.subtract(F(x), F(x_sample)))

@@ -16,7 +16,7 @@ lr = 0.01 #The learning rate for the RBM
 def main():
     #Load the Songs
     #songs = midi_manipulation.get_songs('Pop_Music_Midi')
-    songs = midi_manipulation.get_songs('single_music')
+    songs = midi_manipulation.get_songs('./single_music')
     x = tf.placeholder(tf.float32, [None, rnn_rbm.n_visible], name="x") #The placeholder variable that holds our data
     W   = tf.Variable(tf.random_normal([rnn_rbm.n_visible, rnn_rbm.n_hidden], 0.01), name="W") #The weight matrix of the RBM
     Wuh = tf.Variable(tf.random_normal([rnn_rbm.n_hidden_recurrent, rnn_rbm.n_hidden], 0.0001), name="Wuh")  #The RNN -> RBM hidden weight matrix

@@ -9,9 +9,6 @@ import midi_manipulation
 """
     This file contains the code for training the RNN-RBM by using the data in the Pop_Music_Midi directory
 """
-
-
-batch_size = 500 #The number of trianing examples to feed into the rnn_rbm at a time
 saved_initial_weights_path = "parameter_checkpoints/initialized.ckpt" #The path to the initialized weights checkpoint file
 
 def main(num_epochs):
@@ -32,8 +29,8 @@ def main(num_epochs):
     #updt = opt_func.apply_gradients(grad_and_params)
 
     #songs = midi_manipulation.get_songs('Pop_Music_Midi') #Load the songs 
-    songs = midi_manipulation.get_songs('single_music') #Load the songs 
-    saver = tf.train.Saver(params, max_to_keep=1) #We use this saver object to restore the weights of the model and save the weights every few epochs
+    songs = midi_manipulation.get_songs('./single_music') #Load the songs 
+    saver = tf.train.Saver(params, max_to_keep=1)
     with tf.Session() as sess:
         init = tf.global_variables_initializer()
         sess.run(init) 
@@ -45,15 +42,13 @@ def main(num_epochs):
             costs = []
             start = time.time()
             for idx, song in enumerate(songs):
-                for i in range(1, len(song), batch_size):  #song is a matrix, len(song) is the length of time series.
-                    tr_x = song[i:i + batch_size] 
-                    alpha = min(0.01, 0.1/float(i)) # We decrease the learning rate according to a schedule.
-                    _, C = sess.run([updt, cost], feed_dict={x: tr_x, lr: alpha}) 
-                    costs.append(C) 
+                tr_x = song
+                #alpha = min(0.01, 0.1/float(i)) # We decrease the learning rate according to a schedule.
+                _, C = sess.run([updt, cost], feed_dict={x: tr_x, lr: 0.01}) 
+                costs.append(C) 
             #Print the progress at epoch
             print ("epoch: {} cost: {} time: {}".format(epoch, np.mean(costs), time.time()-start))
             print ("\n")
-            #Here we save the weights of the model every few epochs
             saver.save(sess, "parameter_checkpoints/epoch_{}.ckpt".format(epoch))
 
 if __name__ == "__main__":

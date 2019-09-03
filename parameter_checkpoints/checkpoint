@@ -1,2 +1,2 @@
-model_checkpoint_path: "epoch_18.ckpt"
-all_model_checkpoint_paths: "epoch_18.ckpt"
+model_checkpoint_path: "epoch_29.ckpt"
+all_model_checkpoint_paths: "epoch_29.ckpt"
